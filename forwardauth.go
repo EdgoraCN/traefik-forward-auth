@@ -160,10 +160,12 @@ func (f *ForwardAuth) ExchangeCode(r *http.Request, code string) (string, error)
 // Get user with token
 
 type User struct {
-	Id       string `json:"id"`
+	Id       string `json:"sub"`
 	Email    string `json:"email"`
-	Verified bool   `json:"verified_email"`
+	Verified bool   `json:"email_verified"`
 	Hd       string `json:"hd"`
+	Username string `json:"preferred_username"`
+	Azp      string `json:"azp"`
 }
 
 func (f *ForwardAuth) GetUser(token string) (User, error) {
@@ -234,12 +236,17 @@ func (f *ForwardAuth) useAuthDomain(r *http.Request) (bool, string) {
 
 // Create an auth cookie
 func (f *ForwardAuth) MakeCookie(r *http.Request, email string) *http.Cookie {
+	return f.generateCookie(r, f.CookieName, email)
+}
+
+// Create an auth cookie
+func (f *ForwardAuth) generateCookie(r *http.Request, cookieName string, cookieText string) *http.Cookie {
 	expires := f.cookieExpiry()
-	mac := f.cookieSignature(r, email, fmt.Sprintf("%d", expires.Unix()))
-	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), email)
+	mac := f.cookieSignature(r, cookieText, fmt.Sprintf("%d", expires.Unix()))
+	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), cookieText)
 
 	return &http.Cookie{
-		Name:     f.CookieName,
+		Name:     cookieName,
 		Value:    value,
 		Path:     "/",
 		Domain:   f.cookieDomain(r),

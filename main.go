@@ -57,15 +57,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		// Set the CSRF cookie
 		http.SetCookie(w, fw.MakeCSRFCookie(r, nonce))
 		logger.Debug("Set CSRF cookie and redirecting to oidc login")
-		logger.Debug("uri.Path was %s",uri.Path)
-		logger.Debug("fw.Path was %s",fw.Path)
+		logger.Debug("uri.Path was %s", uri.Path)
+		logger.Debug("fw.Path was %s", fw.Path)
 
 		// Forward them on
 		http.Redirect(w, r, fw.GetLoginURL(r, nonce), http.StatusTemporaryRedirect)
 
 		return
 	}
-
 	// Validate cookie
 	valid, email, err := fw.ValidateCookie(r, c)
 	if !valid {
@@ -84,9 +83,20 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	d, err := r.Cookie("_f_u")
+
+	valid, username, err := fw.ValidateCookie(r, d)
+	if !valid {
+		logger.WithFields(logrus.Fields{
+			"username": username,
+		}).Errorf("Invalid username")
+		http.Error(w, "Not authorized", 401)
+		return
+	}
 	// Valid request
 	logger.Debugf("Allowing valid request ")
-	w.Header().Set("X-Forwarded-User", email)
+	w.Header().Set("X-Forwarded-Email", email)
+	w.Header().Set("X-Forwarded-User", username)
 	w.WriteHeader(200)
 }
 
@@ -133,6 +143,7 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values,
 
 	// Generate cookie
 	http.SetCookie(w, fw.MakeCookie(r, user.Email))
+	http.SetCookie(w, fw.generateCookie(r, "_f_u", user.Username))
 	logger.WithFields(logrus.Fields{
 		"user": user.Email,
 	}).Infof("Generated auth cookie")
