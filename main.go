@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -155,16 +156,17 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values,
 func getOidcConfig(oidc string) map[string]interface{} {
 	uri, err := url.Parse(oidc)
 	if err != nil {
-		log.Fatal("failed to parse oidc string")
+		log.Fatal("failed to parse oidc string", err)
 	}
 	uri.Path = path.Join(uri.Path, "/.well-known/openid-configuration")
+	log.Info("oidc-url=", uri.Path)
 	res, err := http.Get(uri.String())
 	if err != nil {
-		log.Fatal("failed to get oidc parametere from oidc connect")
+		log.Fatal("failed to get oidc parametere from oidc connect:", err)
 	}
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Fatal("failed to read response body")
+		log.Fatal("failed to read response body", err)
 	}
 	var result map[string]interface{}
 	json.Unmarshal(body, &result)
@@ -174,6 +176,7 @@ func getOidcConfig(oidc string) map[string]interface{} {
 
 // Main
 func main() {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	// Parse options
 	flag.String(flag.DefaultConfigFlagname, "", "Path to config file")
 	path := flag.String("url-path", "_oauth", "Callback URL")

@@ -1,4 +1,4 @@
-FROM golang:1.10-alpine as builder
+FROM golang:alpine as builder
 
 # Now we DO need these, for the auto-labeling of the image
 ARG BUILD_DATE
@@ -29,5 +29,6 @@ ADD ./traefik-forward-auth /traefik-forward-auth
 # Copy into scratch container
 FROM alpine
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+#ADD ./ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /traefik-forward-auth ./
 ENTRYPOINT ["./traefik-forward-auth"]
